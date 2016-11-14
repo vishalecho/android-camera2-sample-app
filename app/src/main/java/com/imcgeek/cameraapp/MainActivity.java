@@ -3,8 +3,16 @@ package com.imcgeek.cameraapp;
 import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.ImageFormat;
+import android.graphics.Paint;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -24,6 +32,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.Size;
@@ -46,7 +55,7 @@ import java.util.List;
 @TargetApi(Build.VERSION_CODES.LOLLIPOP)
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "Camera App";
+    private static final String TAG = "CameraApp";
     private Button takePictureButton;
     private TextureView textureView;
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
@@ -68,6 +77,12 @@ public class MainActivity extends AppCompatActivity {
     private boolean mFlashSupported;
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
+
+    int numOfPicturesAlreadyTaken=0;
+    File sdRoot;
+    String dir;
+    String fileName;
+    int GrayScale_Value = 0;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -80,10 +95,56 @@ public class MainActivity extends AppCompatActivity {
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                takePicture();
+                takePictures(10,5000);
             }
         });
     }
+
+    private void takePictures(final int numOfPictures, final int delay) {
+        if (getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA)) {
+            Thread thread = new Thread() {
+                @Override
+                public void run() {
+                    // TODO Auto-generated method stub
+                    super.run();
+                    while (numOfPicturesAlreadyTaken < numOfPictures) {
+                        try {
+                            takePicture(numOfPicturesAlreadyTaken);
+                            numOfPicturesAlreadyTaken++;
+                            sleep(delay);
+                        }
+                        catch (Exception e) {
+                            e.printStackTrace();
+                            Log.d("TEST", e.getMessage());
+                        }
+                    }
+                    Log.d(TAG,"Avg. GS of Multiple Img = "+GrayScale_Value/10);
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Your dialog code.
+                            AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+                            //alertDialog.setIcon(R.mipmap.alert);
+                            alertDialog.setTitle(getString(R.string.Alert));
+                            alertDialog.setMessage(String.valueOf(GrayScale_Value/10));
+                            alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.Ok),
+                                    new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            dialog.dismiss();
+                                        }
+                                    });
+                            alertDialog.show();
+                        }
+                    });
+                }
+            };
+            thread.start();
+        }
+        else {
+            Toast.makeText(this, "No camera found.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
@@ -143,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-    protected void takePicture() {
+    protected void takePicture(int i) {
         if(null == cameraDevice) {
             Log.e(TAG, "cameraDevice is null");
             return;
@@ -171,7 +232,14 @@ public class MainActivity extends AppCompatActivity {
             // Orientation
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
-            final File file = new File(Environment.getExternalStorageDirectory()+"/pic.jpg");
+            sdRoot = Environment.getExternalStorageDirectory();
+            dir = "/DCIM/Camera App/";
+            fileName = String.valueOf(i)+".jpg";
+            final File mkdir = new File(sdRoot,dir);
+            if (!mkdir.exists()){
+                mkdir.mkdirs();
+            }
+            final File file = new File(sdRoot,dir+fileName);
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
@@ -210,6 +278,28 @@ public class MainActivity extends AppCompatActivity {
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
                     super.onCaptureCompleted(session, request, result);
                     Toast.makeText(MainActivity.this, "Saved:" + file, Toast.LENGTH_SHORT).show();
+                    BitmapFactory.Options options = new BitmapFactory.Options();
+                    final Bitmap b = BitmapFactory.decodeFile(String.valueOf(file), options);
+                    Bitmap grayBmp = rgb2gray(b);
+                    int addGrayScale = 0;
+                    int GrayBmpImg_grayScale = 0;
+
+                    int count = 0;
+                    for (int row_i=grayBmp.getWidth()/2;row_i<grayBmp.getWidth()/2+100;row_i++){
+                        for(int col_i=grayBmp.getHeight()/2;col_i<grayBmp.getHeight()/2+100;col_i++){
+                            int temp = grayBmp.getPixel(row_i,col_i);
+                            addGrayScale = addGrayScale + Color.red(temp);
+                            count++;
+                        }
+                    }
+                    GrayBmpImg_grayScale = addGrayScale/count;
+
+                    Log.d(TAG,"Img H*W : "+b.getHeight()+"*"+b.getWidth());
+                    Log.d(TAG,"GrayImg H*W : "+grayBmp.getHeight()+"*"+grayBmp.getWidth());
+                    Log.d(TAG,"File:"+file);
+                    Log.d(TAG,"GrayScale Value = "+GrayBmpImg_grayScale+" || No. of Pixels = "+count);
+                    Log.d(TAG,"------------------------------------------");
+                    GrayScale_Value = GrayScale_Value + GrayBmpImg_grayScale;
                     createCameraPreview();
                 }
             };
@@ -230,6 +320,23 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
+    private Bitmap rgb2gray(Bitmap b) {
+        int width, height;
+        height = b.getHeight();
+        width = b.getWidth();
+
+        Bitmap Bmp_grayScale = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(Bmp_grayScale);
+        Paint paint = new Paint();
+        ColorMatrix cm = new ColorMatrix();
+        cm.setSaturation(0);
+        ColorMatrixColorFilter f = new ColorMatrixColorFilter(cm);
+        paint.setColorFilter(f);
+        c.drawBitmap(b, 0, 0, paint);
+        return b;
+    }
+
     protected void createCameraPreview() {
         try {
             SurfaceTexture texture = textureView.getSurfaceTexture();
