@@ -2,6 +2,7 @@ package com.imcgeek.cameraapp;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
@@ -77,12 +78,15 @@ public class MainActivity extends AppCompatActivity {
     private boolean mFlashSupported;
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
+    ProgressDialog dialog;
 
     int numOfPicturesAlreadyTaken=0;
     File sdRoot;
     String dir;
     String fileName;
     int GrayScale_Value = 0;
+    int Capture_delay = 2500;
+    int NumOfImg = 5;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -92,10 +96,34 @@ public class MainActivity extends AppCompatActivity {
         textureView.setSurfaceTextureListener(textureListener);
         takePictureButton = (Button) findViewById(R.id.btn_takepicture);
         assert takePictureButton != null;
+
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                takePictures(10,5000);
+                dialog = ProgressDialog.show(MainActivity.this,"Testing","Processing....!",true);
+                Thread thread = new Thread(){
+                    @Override
+                   public void run(){
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                dialog.show();
+                            }
+                        });
+                        try{
+                            for(int i=0;i<2;i++){
+                                Log.d(TAG,"Start");
+                                takePictures(NumOfImg,Capture_delay);
+                                sleep(NumOfImg*Capture_delay+Capture_delay);
+                                Log.d(TAG,"Stop");
+                            }
+                            dialog.dismiss();
+                        }catch (Exception e){
+                            e.printStackTrace();
+                            dialog.dismiss();
+                        }
+                    }
+                };
+                thread.start();
             }
         });
     }
