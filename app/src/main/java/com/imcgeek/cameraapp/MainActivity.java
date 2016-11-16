@@ -41,6 +41,8 @@ import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 import java.io.File;
@@ -80,16 +82,19 @@ public class MainActivity extends AppCompatActivity {
     private HandlerThread mBackgroundThread;
     ProgressDialog dialog;
 
-    int numOfPicturesAlreadyTaken=0;
     File sdRoot;
     String dir;
     String fileName;
-    int GrayScale_Value = 0;
+    int GrayScale_Value;
+    int sumOfMultiImgGS = 0;
     int Capture_delay = 2500;
     int NumOfImg = 5;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_main);
         textureView = (TextureView) findViewById(R.id.texture);
         assert textureView != null;
@@ -103,19 +108,39 @@ public class MainActivity extends AppCompatActivity {
                 dialog = ProgressDialog.show(MainActivity.this,"Testing","Processing....!",true);
                 Thread thread = new Thread(){
                     @Override
-                   public void run(){
+                    public void run(){
                         runOnUiThread(new Runnable() {
                             public void run() {
                                 dialog.show();
                             }
                         });
                         try{
-                            for(int i=0;i<2;i++){
+                            for(int i=0;i<5;i++){
                                 Log.d(TAG,"Start");
+                                GrayScale_Value = 0;
+                                Log.i(TAG,"GrayScale = "+GrayScale_Value);
                                 takePictures(NumOfImg,Capture_delay);
                                 sleep(NumOfImg*Capture_delay+Capture_delay);
                                 Log.d(TAG,"Stop");
                             }
+                            Log.i(TAG,"AvgGSofMulImg :"+sumOfMultiImgGS/5);
+                            runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            // Your dialog code.
+                            AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+                            //alertDialog.setIcon(R.mipmap.alert);
+                            alertDialog.setTitle(getString(R.string.Alert));
+                            alertDialog.setMessage(String.valueOf(sumOfMultiImgGS/5));
+                            alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.Ok),
+                                    new DialogInterface.OnClickListener() {
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            dialog.dismiss();
+                                        }
+                                    });
+                            alertDialog.show();
+                        }
+                    });
                             dialog.dismiss();
                         }catch (Exception e){
                             e.printStackTrace();
@@ -135,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     // TODO Auto-generated method stub
                     super.run();
+                    int numOfPicturesAlreadyTaken = 0;
                     while (numOfPicturesAlreadyTaken < numOfPictures) {
                         try {
                             takePicture(numOfPicturesAlreadyTaken);
@@ -146,24 +172,8 @@ public class MainActivity extends AppCompatActivity {
                             Log.d("TEST", e.getMessage());
                         }
                     }
-                    Log.d(TAG,"Avg. GS of Multiple Img = "+GrayScale_Value/10);
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            // Your dialog code.
-                            AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
-                            //alertDialog.setIcon(R.mipmap.alert);
-                            alertDialog.setTitle(getString(R.string.Alert));
-                            alertDialog.setMessage(String.valueOf(GrayScale_Value/10));
-                            alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.Ok),
-                                    new DialogInterface.OnClickListener() {
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            dialog.dismiss();
-                                        }
-                                    });
-                            alertDialog.show();
-                        }
-                    });
+                    sumOfMultiImgGS = sumOfMultiImgGS + GrayScale_Value/numOfPictures;
+                    Log.d(TAG,"Avg. GS of Multiple Img = "+GrayScale_Value/numOfPictures);
                 }
             };
             thread.start();
