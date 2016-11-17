@@ -26,6 +26,7 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -45,6 +46,11 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
+
+import com.google.android.gms.appindexing.Action;
+import com.google.android.gms.appindexing.AppIndex;
+import com.google.android.gms.common.api.GoogleApiClient;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -62,12 +68,14 @@ public class MainActivity extends AppCompatActivity {
     private Button takePictureButton;
     private TextureView textureView;
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
+
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
         ORIENTATIONS.append(Surface.ROTATION_90, 0);
         ORIENTATIONS.append(Surface.ROTATION_180, 270);
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
+
     private String cameraId;
     protected CameraDevice cameraDevice;
     protected CameraCaptureSession cameraCaptureSessions;
@@ -86,9 +94,15 @@ public class MainActivity extends AppCompatActivity {
     String dir;
     String fileName;
     int GrayScale_Value;
-    int sumOfMultiImgGS = 0;
+    int sumOfMultiImgGS;
     int Capture_delay = 2500;
     int NumOfImg = 5;
+    /**
+     * ATTENTION: This was auto-generated to implement the App Indexing API.
+     * See https://g.co/AppIndexing/AndroidStudio for more information.
+     */
+    private GoogleApiClient client;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -105,44 +119,45 @@ public class MainActivity extends AppCompatActivity {
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dialog = ProgressDialog.show(MainActivity.this,"Testing","Processing....!",true);
-                Thread thread = new Thread(){
+                sumOfMultiImgGS = 0;
+                dialog = ProgressDialog.show(MainActivity.this, "Testing", "Processing....!", true);
+                Thread thread = new Thread() {
                     @Override
-                    public void run(){
+                    public void run() {
                         runOnUiThread(new Runnable() {
                             public void run() {
                                 dialog.show();
                             }
                         });
-                        try{
-                            for(int i=0;i<5;i++){
-                                Log.d(TAG,"Start");
+                        try {
+                            for (int i = 0; i < 5; i++) {
+                                Log.d(TAG, "Start-" + i);
                                 GrayScale_Value = 0;
-                                Log.i(TAG,"GrayScale = "+GrayScale_Value);
-                                takePictures(NumOfImg,Capture_delay);
-                                sleep(NumOfImg*Capture_delay+Capture_delay);
-                                Log.d(TAG,"Stop");
+                                Log.i(TAG, "GrayScale = " + GrayScale_Value);
+                                takePictures(NumOfImg, Capture_delay);
+                                sleep(NumOfImg * Capture_delay + Capture_delay);
+                                Log.d(TAG, "Stop");
                             }
-                            Log.i(TAG,"AvgGSofMulImg :"+sumOfMultiImgGS/5);
+                            Log.i(TAG, "AvgGSofMulImg :" + Math.round(sumOfMultiImgGS / 5));
                             runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            // Your dialog code.
-                            AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
-                            //alertDialog.setIcon(R.mipmap.alert);
-                            alertDialog.setTitle(getString(R.string.Alert));
-                            alertDialog.setMessage(String.valueOf(sumOfMultiImgGS/5));
-                            alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.Ok),
-                                    new DialogInterface.OnClickListener() {
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            dialog.dismiss();
-                                        }
-                                    });
-                            alertDialog.show();
-                        }
-                    });
+                                @Override
+                                public void run() {
+                                    // Your dialog code.
+                                    AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+                                    //alertDialog.setIcon(R.mipmap.alert);
+                                    alertDialog.setTitle(getString(R.string.Alert));
+                                    alertDialog.setMessage(String.valueOf(Math.round(sumOfMultiImgGS / 5)));
+                                    alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, getString(R.string.Ok),
+                                            new DialogInterface.OnClickListener() {
+                                                public void onClick(DialogInterface dialog, int which) {
+                                                    dialog.dismiss();
+                                                }
+                                            });
+                                    alertDialog.show();
+                                }
+                            });
                             dialog.dismiss();
-                        }catch (Exception e){
+                        } catch (Exception e) {
                             e.printStackTrace();
                             dialog.dismiss();
                         }
@@ -151,6 +166,9 @@ public class MainActivity extends AppCompatActivity {
                 thread.start();
             }
         });
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
     }
 
     private void takePictures(final int numOfPictures, final int delay) {
@@ -166,19 +184,17 @@ public class MainActivity extends AppCompatActivity {
                             takePicture(numOfPicturesAlreadyTaken);
                             numOfPicturesAlreadyTaken++;
                             sleep(delay);
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                             e.printStackTrace();
                             Log.d("TEST", e.getMessage());
                         }
                     }
-                    sumOfMultiImgGS = sumOfMultiImgGS + GrayScale_Value/numOfPictures;
-                    Log.d(TAG,"Avg. GS of Multiple Img = "+GrayScale_Value/numOfPictures);
+                    sumOfMultiImgGS = sumOfMultiImgGS + Math.round(GrayScale_Value / numOfPictures);
+                    Log.d(TAG, "Avg. GS of Multiple Img = " + GrayScale_Value / numOfPictures);
                 }
             };
             thread.start();
-        }
-        else {
+        } else {
             Toast.makeText(this, "No camera found.", Toast.LENGTH_SHORT).show();
         }
     }
@@ -189,14 +205,17 @@ public class MainActivity extends AppCompatActivity {
             //open your camera here
             openCamera();
         }
+
         @Override
         public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
             // Transform you image captured size according to the surface width and height
         }
+
         @Override
         public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
             return false;
         }
+
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture surface) {
         }
@@ -209,10 +228,12 @@ public class MainActivity extends AppCompatActivity {
             cameraDevice = camera;
             createCameraPreview();
         }
+
         @Override
         public void onDisconnected(CameraDevice camera) {
             cameraDevice.close();
         }
+
         @Override
         public void onError(CameraDevice camera, int error) {
             cameraDevice.close();
@@ -227,11 +248,13 @@ public class MainActivity extends AppCompatActivity {
             createCameraPreview();
         }
     };
+
     protected void startBackgroundThread() {
         mBackgroundThread = new HandlerThread("Camera Background");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
     }
+
     protected void stopBackgroundThread() {
         mBackgroundThread.quitSafely();
         try {
@@ -242,8 +265,9 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
     protected void takePicture(int i) {
-        if(null == cameraDevice) {
+        if (null == cameraDevice) {
             Log.e(TAG, "cameraDevice is null");
             return;
         }
@@ -272,12 +296,12 @@ public class MainActivity extends AppCompatActivity {
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, ORIENTATIONS.get(rotation));
             sdRoot = Environment.getExternalStorageDirectory();
             dir = "/DCIM/Camera App/";
-            fileName = String.valueOf(i)+".jpg";
-            final File mkdir = new File(sdRoot,dir);
-            if (!mkdir.exists()){
+            fileName = String.valueOf(i) + ".jpg";
+            final File mkdir = new File(sdRoot, dir);
+            if (!mkdir.exists()) {
                 mkdir.mkdirs();
             }
-            final File file = new File(sdRoot,dir+fileName);
+            final File file = new File(sdRoot, dir + fileName);
             ImageReader.OnImageAvailableListener readerListener = new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
@@ -298,6 +322,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 }
+
                 private void save(byte[] bytes) throws IOException {
                     OutputStream output = null;
                     try {
@@ -323,20 +348,20 @@ public class MainActivity extends AppCompatActivity {
                     int GrayBmpImg_grayScale = 0;
 
                     int count = 0;
-                    for (int row_i=grayBmp.getWidth()/2;row_i<grayBmp.getWidth()/2+100;row_i++){
-                        for(int col_i=grayBmp.getHeight()/2;col_i<grayBmp.getHeight()/2+100;col_i++){
-                            int temp = grayBmp.getPixel(row_i,col_i);
+                    for (int row_i = grayBmp.getWidth() / 2; row_i < grayBmp.getWidth() / 2 + 100; row_i++) {
+                        for (int col_i = grayBmp.getHeight() / 2; col_i < grayBmp.getHeight() / 2 + 100; col_i++) {
+                            int temp = grayBmp.getPixel(row_i, col_i);
                             addGrayScale = addGrayScale + Color.red(temp);
                             count++;
                         }
                     }
-                    GrayBmpImg_grayScale = addGrayScale/count;
+                    GrayBmpImg_grayScale = addGrayScale / count;
 
-                    Log.d(TAG,"Img H*W : "+b.getHeight()+"*"+b.getWidth());
-                    Log.d(TAG,"GrayImg H*W : "+grayBmp.getHeight()+"*"+grayBmp.getWidth());
-                    Log.d(TAG,"File:"+file);
-                    Log.d(TAG,"GrayScale Value = "+GrayBmpImg_grayScale+" || No. of Pixels = "+count);
-                    Log.d(TAG,"------------------------------------------");
+//                    Log.d(TAG,"Img H*W : "+b.getHeight()+"*"+b.getWidth());
+//                    Log.d(TAG,"GrayImg H*W : "+grayBmp.getHeight()+"*"+grayBmp.getWidth());
+//                    Log.d(TAG,"File:"+file);
+                    Log.d(TAG, "GrayScale Value = " + GrayBmpImg_grayScale);
+//                    Log.d(TAG,"------------------------------------------");
                     GrayScale_Value = GrayScale_Value + GrayBmpImg_grayScale;
                     createCameraPreview();
                 }
@@ -350,6 +375,7 @@ public class MainActivity extends AppCompatActivity {
                         e.printStackTrace();
                     }
                 }
+
                 @Override
                 public void onConfigureFailed(CameraCaptureSession session) {
                 }
@@ -383,7 +409,7 @@ public class MainActivity extends AppCompatActivity {
             Surface surface = new Surface(texture);
             captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             captureRequestBuilder.addTarget(surface);
-            cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback(){
+            cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
                     //The camera is already closed
@@ -394,6 +420,7 @@ public class MainActivity extends AppCompatActivity {
                     cameraCaptureSessions = cameraCaptureSession;
                     updatePreview();
                 }
+
                 @Override
                 public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
                     Toast.makeText(MainActivity.this, "Configuration change", Toast.LENGTH_SHORT).show();
@@ -403,6 +430,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
     private void openCamera() {
         CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
         Log.e(TAG, "is camera open");
@@ -423,8 +451,9 @@ public class MainActivity extends AppCompatActivity {
         }
         Log.e(TAG, "openCamera X");
     }
+
     protected void updatePreview() {
-        if(null == cameraDevice) {
+        if (null == cameraDevice) {
             Log.e(TAG, "updatePreview error, return");
         }
         captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
@@ -434,6 +463,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
+
     private void closeCamera() {
         if (null != cameraDevice) {
             cameraDevice.close();
@@ -444,6 +474,7 @@ public class MainActivity extends AppCompatActivity {
             imageReader = null;
         }
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CAMERA_PERMISSION) {
@@ -454,6 +485,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     }
+
     @Override
     protected void onResume() {
         super.onResume();
@@ -465,11 +497,52 @@ public class MainActivity extends AppCompatActivity {
             textureView.setSurfaceTextureListener(textureListener);
         }
     }
+
     @Override
     protected void onPause() {
         Log.e(TAG, "onPause");
         //closeCamera();
         stopBackgroundThread();
         super.onPause();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        client.connect();
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.imcgeek.cameraapp/http/host/path")
+        );
+        AppIndex.AppIndexApi.start(client, viewAction);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        // ATTENTION: This was auto-generated to implement the App Indexing API.
+        // See https://g.co/AppIndexing/AndroidStudio for more information.
+        Action viewAction = Action.newAction(
+                Action.TYPE_VIEW, // TODO: choose an action type.
+                "Main Page", // TODO: Define a title for the content shown.
+                // TODO: If you have web page content that matches this app activity's content,
+                // make sure this auto-generated web page URL is correct.
+                // Otherwise, set the URL to null.
+                Uri.parse("http://host/path"),
+                // TODO: Make sure this auto-generated app URL is correct.
+                Uri.parse("android-app://com.imcgeek.cameraapp/http/host/path")
+        );
+        AppIndex.AppIndexApi.end(client, viewAction);
+        client.disconnect();
     }
 }
