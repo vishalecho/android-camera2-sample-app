@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
                                 sleep(NumOfImg * Capture_delay + Capture_delay);
                                 Log.d(TAG, "Stop");
                             }
-                            Log.i(TAG, "AvgGSofMulImg :" + Math.round(sumOfMultiImgGS / 5));
+                            Log.i(TAG, "Final GrayScale Value :" + Math.round(sumOfMultiImgGS / 5));
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
