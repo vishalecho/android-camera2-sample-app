@@ -5,6 +5,7 @@ import android.annotation.TargetApi;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -151,6 +152,8 @@ public class MainActivity extends AppCompatActivity {
                                             new DialogInterface.OnClickListener() {
                                                 public void onClick(DialogInterface dialog, int which) {
                                                     dialog.dismiss();
+                                                    Intent intent = new Intent(MainActivity.this,LauncherActivity.class);
+                                                    startActivity(intent);
                                                 }
                                             });
                                     alertDialog.show();
