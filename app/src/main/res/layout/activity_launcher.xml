@@ -3,18 +3,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/common_action_bar_splitter"
+    android:theme="@style/AppTheme"
     tools:context="com.imcgeek.cameraapp.LauncherActivity">
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:padding="@dimen/activity_horizontal_margin"
-        android:text="Test"
-        android:background="@color/common_signin_btn_dark_text_focused"
+        android:text="Open Camera"
         android:textSize="35dp"
         android:id="@+id/button"
         android:layout_centerVertical="true"
         android:layout_centerHorizontal="true"
-        android:textColor="@color/colorPrimaryDark"/>
+        android:textColor="#FFD6AE35"/>
 </RelativeLayout>
